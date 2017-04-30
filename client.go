@@ -9,6 +9,8 @@ import(
 	 "net/textproto"
 	 "bufio"
 	 "time"
+	 "./extfiles"
+	 "math"
 )
 
 type Message struct {
@@ -24,7 +26,10 @@ func main () {
 	fmt.Println("\033[H\033[2J")
 	fmt.Println("Welcome to TicTacToe!")
 	fmt.Println("Trying to connect to the server...")
-
+	board_example := make([]int, 9)
+	for i:=0; i<len(board_example); i++{
+		board_example[i] = i
+	}
 	conn, err := net.Dial("tcp", "localhost:13000")
 	if err != nil {
 		fmt.Println("Dial's Error: ", err)
@@ -35,25 +40,48 @@ func main () {
 	quit := false
 	reader := bufio.NewReader(conn)
 	tp := textproto.NewReader(reader)
+	board := tictactoe.Board{make([]int, 3*3), 1, 3}
 	for{
 		if quit{ break }
 		quit2:= false
 		choice := PrintInitialInterface()
+		board.SetBoard()
 		switch choice{
 			case 1: // start a new game
 				for{
 					if quit2{break}
-					choice2 := PrintSecondInterface()
+					choice2 := PrintSecondInterface(board.Board)
 					switch choice2{
 						case 1: //Make a play
-							line, _ := tp.ReadLine()
-						 	var m Message
-							err = json.Unmarshal([]byte(line), &m)
-							if err != nil{
-								fmt.Println("Erro em descompactar o json")
+							play := PrintThirdInterface(board.Board, board_example)
+							if play == 9{
+								fmt.Println("Invalid choice!")
+							}else{
+								if(board.IsThisPlayAvaliable(board.DesConvertPlay(play))){ //Mandar pro servidor avaliar
+									board.SetPlay(play)
+									if(board.IsWinner(board.DesConvertPlay(play))){
+										Someonehaswon(board.GetPlayer(), board.Board)
+										quit2 = true
+									}else if(board.IsBoardFull()){
+										DrawGame(board.Board)
+										quit2 = true
+									}else{ //Computer plays
+										fmt.Println("Computer plays..")
+									}
+								}else{
+									fmt.Println("Your play isn't avaliable! Try another!")
+									time.Sleep(time.Second * 2)
+									break;
+								}
+								line, _ := tp.ReadLine()
+							 	var m Message
+								err = json.Unmarshal([]byte(line), &m)
+								if err != nil{
+									fmt.Println("Erro em descompactar o json")
+								}
+							 	fmt.Println(m)
+							 	time.Sleep(time.Second * 2)
 							}
-						 	fmt.Println(m)
-						 	time.Sleep(time.Second * 2)
 						case 2: 
 							quit2 = true
 							break
@@ -84,7 +112,6 @@ func main () {
 
 func mustCopy (dst io.Writer, src io.Reader) {
 	_, err := io.Copy(dst, src)
-
 	if err != nil {
 		fmt.Println("Erro no mustCopy: ", err)
 		os.Exit(1)
@@ -109,10 +136,11 @@ func PrintInitialInterface() int{
 	return i
 }
 
-func PrintSecondInterface() int{
+func PrintSecondInterface(board []int) int{
 	fmt.Println("\033[H\033[2J")
 	fmt.Println("===== GAME =====\n")
 	fmt.Println("-- Actual Board --")
+	NormalizeBoard(board)
 	fmt.Println("(1) - Make a play")
 	fmt.Println("(2) - Back (will reset the game)")
 	fmt.Println("\n================")
@@ -125,4 +153,56 @@ func PrintSecondInterface() int{
 		return 3
 	}
 	return i
+}
+
+func PrintThirdInterface(board []int, example []int) int{
+	fmt.Println("\033[H\033[2J")
+	fmt.Println("===== MAKE A PLAY =====\n")
+	fmt.Println("Make a play using the numbers below: ")
+	fmt.Println("-- Example Board --")
+	NormalizeBoard(example)
+	fmt.Println("-- Actual Board --")
+	NormalizeBoard(board)
+	var i int
+	fmt.Print("Your choice -> ")
+	fmt.Println("\n=========================")
+	_, err := fmt.Scanf("%d", &i)
+
+	if err != nil{
+		fmt.Println("Scanf error: ", err)
+		return 9
+	}
+	return i	
+}
+
+func NormalizeBoard(board []int){
+	tam := int(math.Sqrt(float64(len(board))))
+	x:= make([]int, tam)
+	y:=make([]int, tam)
+	z:=make([]int, tam)
+	for i:= 0; i< tam; i++{
+		x[i] = board[i]
+		y[i] = board[i + 3]
+		z[i] = board[i + 6]
+	}
+	fmt.Println(x)
+	fmt.Println(y)
+	fmt.Println(z)
+}
+
+func Someonehaswon(player int, board []int){
+	fmt.Println("\033[H\033[2J")
+	fmt.Println("===== TIC TAC TOE =====\n")
+	fmt.Printf("Player %d has won!!\n", player)
+	NormalizeBoard(board)
+	fmt.Println("=========================")
+	time.Sleep(time.Second * 2)
+}
+
+func DrawGame(board []int){
+	fmt.Println("\033[H\033[2J")
+	fmt.Println("===== DRAW GAME =====\n")
+	NormalizeBoard(board)
+	fmt.Println("=======================")
+	time.Sleep(time.Second * 2)	
 }
