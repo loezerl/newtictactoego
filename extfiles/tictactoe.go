@@ -28,9 +28,8 @@ func(b *Board) SetBoard(){
 	}
 	b.Player = 1
 }//ok
-func(b Board) SetPlay(i, k int){
-	x := b.ConvertPlay(i, k)
-	b.Board[x] = b.Player
+func(b Board) SetPlay(play int){
+	b.Board[play] = b.Player
 }//ok
 func(b *Board) ChangePlayer(){
 	if(b.Player == 1){
