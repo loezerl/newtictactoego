@@ -31,6 +31,8 @@ type MessageTTT struct{
 // MakeAPlay -> Server's play
 // GameOver -> TicTacToe | Draw
 // Exit -> ConClose on servers side
+// ERROR -> Id Problem
+// DEFAULT -> do nothing
 
 
 func main () {
@@ -67,7 +69,7 @@ func main () {
 							if play == 9{
 								fmt.Println("Invalid choice!")
 							}else{
-								if(board.IsThisPlayAvaliable(board.DesConvertPlay(play))){ //Mandar pro servidor avaliar
+								if((board.IsThisPlayAvaliable(board.DesConvertPlay(play))) && (ServerCheckPlay(conn, play, board.Board))){
 									board.SetPlay(play)
 									if(board.IsWinner(board.DesConvertPlay(play))){
 										Someonehaswon(board.GetPlayer(), board.Board)
@@ -83,15 +85,15 @@ func main () {
 											time.Sleep(time.Second * 2)
 											quit2 = true
 											quit = true
+											ExitServer(conn)
 											break
 										}
+										board.SetPlay(play2)
 										if(board.IsWinner(board.DesConvertPlay(play2))){
 											Someonehaswon(board.GetPlayer(), board.Board)
-											//Send message GameOver
 											quit2 = true
 										}else if(board.IsBoardFull()){
 											DrawGame(board.Board)
-											//Send message GameOver
 											quit2 = true
 										}else{
 											board.ChangePlayer() //Change to client
@@ -118,6 +120,7 @@ func main () {
 					}										
 				}
 			case 2: //exit for
+				ExitServer(conn)
 				quit = true
 				break
 			case 3:
@@ -266,4 +269,55 @@ func ComputerIsPlaying(board tictactoe.Board, conn net.Conn) int{
 	}
 	time.Sleep(time.Second * 1)
 	return m.Play
+}
+
+func ExitServer(conn net.Conn){
+	m := MessageTTT{"Exit", make([]int, 0), -1}
+	b, _ := json.Marshal(m)
+	_, erro := conn.Write(b)
+	conn.Write([]byte("\n"))
+	if erro != nil{
+		fmt.Println("Problemas ao enviar o json")
+	}
+
+	reader := bufio.NewReader(conn)
+	tp := textproto.NewReader(reader)
+
+	//Recieve the servers play
+	line, _ := tp.ReadLine()
+	//Unmarshal the json
+ 	var m2 MessageTTT
+	err2 := json.Unmarshal([]byte(line), &m2)
+	if err2 != nil{
+		fmt.Println("Erro em descompactar o json")
+	}
+	if(m2.ID == "Exit"){
+		fmt.Println("Closing connection...")
+	}
+}
+
+func ServerCheckPlay(conn net.Conn, play int, board []int) bool{
+	m := MessageTTT{"Checkplay", board, play}
+	b, _ := json.Marshal(m)
+	_, erro := conn.Write(b)
+	conn.Write([]byte("\n"))
+	if erro != nil{
+		fmt.Println("Problemas ao enviar o json")
+	}
+
+	reader := bufio.NewReader(conn)
+	tp := textproto.NewReader(reader)
+
+	//Recieve the servers play
+	line, _ := tp.ReadLine()
+	//Unmarshal the json
+ 	var m2 MessageTTT
+	err2 := json.Unmarshal([]byte(line), &m2)
+	if err2 != nil{
+		fmt.Println("Erro em descompactar o json")
+	}
+	if(m2.ID == "CheckTrue"){
+		return true
+	}
+	return false
 }
