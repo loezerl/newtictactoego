@@ -19,6 +19,18 @@ type Message struct {
     Time int64
 }
 
+type MessageTTT struct{
+	ID string
+	Array []int //default [array of zeros]
+	Play int //default -1
+}
+// IDs
+// Checkplay -> will check if the client's play is correct
+// CheckTrue -> Client's play True
+// CheckFalse -> Client's play False
+// MakeAPlay -> Server's play
+// GameOver -> TicTacToe | Draw
+// Exit -> ConClose on servers side
 
 
 func main () {
@@ -38,8 +50,6 @@ func main () {
 	defer conn.Close()
 	
 	quit := false
-	reader := bufio.NewReader(conn)
-	tp := textproto.NewReader(reader)
 	board := tictactoe.Board{make([]int, 3*3), 1, 3}
 	for{
 		if quit{ break }
@@ -66,21 +76,33 @@ func main () {
 										DrawGame(board.Board)
 										quit2 = true
 									}else{ //Computer plays
-										fmt.Println("Computer plays..")
+										board.ChangePlayer() //Change to computer
+										play2 := ComputerIsPlaying(board, conn)
+										if(play2 == 9){
+											fmt.Println("Connect problems.. exiting")
+											time.Sleep(time.Second * 2)
+											quit2 = true
+											quit = true
+											break
+										}
+										if(board.IsWinner(board.DesConvertPlay(play2))){
+											Someonehaswon(board.GetPlayer(), board.Board)
+											//Send message GameOver
+											quit2 = true
+										}else if(board.IsBoardFull()){
+											DrawGame(board.Board)
+											//Send message GameOver
+											quit2 = true
+										}else{
+											board.ChangePlayer() //Change to client
+											break;
+										}
 									}
 								}else{
 									fmt.Println("Your play isn't avaliable! Try another!")
 									time.Sleep(time.Second * 2)
 									break;
 								}
-								line, _ := tp.ReadLine()
-							 	var m Message
-								err = json.Unmarshal([]byte(line), &m)
-								if err != nil{
-									fmt.Println("Erro em descompactar o json")
-								}
-							 	fmt.Println(m)
-							 	time.Sleep(time.Second * 2)
 							}
 						case 2: 
 							quit2 = true
@@ -172,6 +194,9 @@ func PrintThirdInterface(board []int, example []int) int{
 		fmt.Println("Scanf error: ", err)
 		return 9
 	}
+	if ((i < 0) || (i > 8)){
+		return 9
+	}
 	return i	
 }
 
@@ -205,4 +230,40 @@ func DrawGame(board []int){
 	NormalizeBoard(board)
 	fmt.Println("=======================")
 	time.Sleep(time.Second * 2)	
+}
+
+func ComputerIsPlaying(board tictactoe.Board, conn net.Conn) int{
+	fmt.Println("\033[H\033[2J")
+	fmt.Println("===== Computer is Playing =====\n")
+	fmt.Println("=================================")
+	
+	//Creating json
+	avaliableplays := board.AvaliablePlays()
+	if len(avaliableplays) <= 0{
+		return 9
+	}
+	m2 := MessageTTT{"MakeAPlay", avaliableplays, -1}
+	b, _ := json.Marshal(m2)
+	//Sending the json to the server with an array of avaliable plays
+	_, erro := conn.Write(b)
+	conn.Write([]byte("\n"))
+	if erro != nil{
+		fmt.Println("Problemas ao enviar o json")
+		return 9
+	}
+
+	reader := bufio.NewReader(conn)
+	tp := textproto.NewReader(reader)
+
+	//Recieve the servers play
+	line, _ := tp.ReadLine()
+	//Unmarshal the json
+ 	var m MessageTTT
+	err2 := json.Unmarshal([]byte(line), &m)
+	if err2 != nil{
+		fmt.Println("Erro em descompactar o json")
+		return 9
+	}
+	time.Sleep(time.Second * 1)
+	return m.Play
 }
