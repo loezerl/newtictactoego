@@ -152,7 +152,7 @@ func PrintInitialInterface() int{
 	fmt.Println("\n=======================")
 	var i int
 	fmt.Print("Your choice -> ")
-	_, err := fmt.Scanf("%d", &i)
+	_, err := fmt.Scanf("%d ", &i)
 
 	if err != nil{
 		fmt.Println("Scanf error: ", err)
@@ -171,7 +171,7 @@ func PrintSecondInterface(board []int) int{
 	fmt.Println("\n================")
 	var i int
 	fmt.Print("Your choice -> ")
-	_, err := fmt.Scanf("%d", &i)
+	_, err := fmt.Scanf("%d ", &i)
 
 	if err != nil{
 		fmt.Println("Scanf error: ", err)
@@ -191,7 +191,7 @@ func PrintThirdInterface(board []int, example []int) int{
 	var i int
 	fmt.Print("Your choice -> ")
 	fmt.Println("\n=========================")
-	_, err := fmt.Scanf("%d", &i)
+	_, err := fmt.Scanf("%d ", &i)
 
 	if err != nil{
 		fmt.Println("Scanf error: ", err)
