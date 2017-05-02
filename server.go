@@ -59,8 +59,8 @@ func handleConn (conn net.Conn) {
 	var Play int
 	Resp:= MessageTTT{"DEFAULT", make([]int, 9), -1}
 
-	for{
-		if(exit){break}
+	for !exit{
+		//if(exit){break}
 		fmt.Println("Waiting for client to send the json..")
 		line, _ := tp.ReadLine()
 		fmt.Println("Client's json recieved")
